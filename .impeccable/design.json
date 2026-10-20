@@ -1,0 +1,169 @@
+{
+    "schemaVersion":  2,
+    "generatedAt":  "2026-10-20T19:03:02.0646864Z",
+    "title":  "Design System: Telegram Campaign Manager",
+    "extensions":  {
+                       "typographyMeta":  {
+                                              "headline":  {
+                                                               "displayName":  "Page title",
+                                                               "purpose":  "Desktop page headings; 24px at the narrow breakpoint."
+                                                           },
+                                              "body":  {
+                                                           "displayName":  "Persian system text",
+                                                           "purpose":  "Local system font stack with readable line height."
+                                                       }
+                                          },
+                       "breakpoints":  [
+                                           {
+                                               "value":  "1500px",
+                                               "name":  "wide-min"
+                                           },
+                                           {
+                                               "value":  "1150px",
+                                               "name":  "compact-max"
+                                           },
+                                           {
+                                               "value":  "720px",
+                                               "name":  "mobile-max"
+                                           }
+                                       ],
+                       "shadows":  [
+                                       {
+                                           "name":  "transient-notice",
+                                           "value":  "0 8px 24px #00000025",
+                                           "purpose":  "Fixed notice above the workspace; ordinary panels are flat."
+                                       }
+                                   ],
+                       "motion":  [
+                                      {
+                                          "name":  "ease",
+                                          "value":  "cubic-bezier(.16,1,.3,1)",
+                                          "purpose":  "Button background and progress transitions."
+                                      },
+                                      {
+                                          "name":  "button-background",
+                                          "value":  "180ms",
+                                          "purpose":  "Background state changes."
+                                      },
+                                      {
+                                          "name":  "progress",
+                                          "value":  "300ms",
+                                          "purpose":  "Progress transform changes."
+                                      },
+                                      {
+                                          "name":  "reduced-motion",
+                                          "value":  "transition:none!important;animation:none!important;scroll-behavior:auto!important",
+                                          "purpose":  "Applied under prefers-reduced-motion:reduce."
+                                      }
+                                  ]
+                   },
+    "components":  [
+                       {
+                           "name":  "Primary Button",
+                           "description":  "Implemented compact action variant.",
+                           "css":  ".ds-button-primary{font-family:\"Segoe UI\",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);border-radius:7px;padding:9px 18px;cursor:pointer;transition:background .18s cubic-bezier(.16,1,.3,1);background:var(--accent);color:#fff;}.(:disabled){background:#0d3c45;}.ds-button-primary:focus-visible{outline:3px solid #42838e;outline-offset:3px} .ds-button-primary:disabled{opacity:.48;cursor:not-allowed}",
+                           "kind":  "button",
+                           "refersTo":  "button-primary",
+                           "html":  "\u003cbutton class=\"ds-button-primary\" dir=\"rtl\"\u003eشروع ارسال\u003c/button\u003e"
+                       },
+                       {
+                           "name":  "Secondary Button",
+                           "description":  "Implemented compact action variant.",
+                           "css":  ".ds-button-secondary{font-family:\"Segoe UI\",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);border-radius:7px;padding:9px 18px;cursor:pointer;transition:background .18s cubic-bezier(.16,1,.3,1);background:#fff;color:var(--ink);border-color:#b8c8cf;}.(:disabled){background:#eaf0f2;}.ds-button-secondary:focus-visible{outline:3px solid #42838e;outline-offset:3px} .ds-button-secondary:disabled{opacity:.48;cursor:not-allowed}",
+                           "kind":  "button",
+                           "refersTo":  "button-secondary",
+                           "html":  "\u003cbutton class=\"ds-button-secondary\" dir=\"rtl\"\u003eورود CSV\u003c/button\u003e"
+                       },
+                       {
+                           "name":  "Quiet Button",
+                           "description":  "Implemented compact action variant.",
+                           "css":  ".ds-button-quiet{font-family:\"Segoe UI\",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);border-radius:7px;padding:9px 18px;cursor:pointer;transition:background .18s cubic-bezier(.16,1,.3,1);background:transparent;color:var(--accent);border-color:transparent;padding:5px 10px;}.(:disabled){background:var(--accent-soft);}.ds-button-quiet:focus-visible{outline:3px solid #42838e;outline-offset:3px} .ds-button-quiet:disabled{opacity:.48;cursor:not-allowed}",
+                           "kind":  "button",
+                           "refersTo":  "button-quiet",
+                           "html":  "\u003cbutton class=\"ds-button-quiet\" dir=\"rtl\"\u003eبررسی فهرست\u003c/button\u003e"
+                       },
+                       {
+                           "name":  "Danger Button",
+                           "description":  "Full-size destructive detail action and compact red row action. Account/list/campaign deletion uses an effects-specific native confirmation. Disabled during active jobs; failed account cleanup exposes a retry-delete label.",
+                           "css":  ".ds-button-danger{font-family:\"Segoe UI\",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);border-radius:7px;padding:9px 18px;cursor:pointer;transition:background .18s cubic-bezier(.16,1,.3,1);background:#fff;color:var(--danger);border-color:#d4a5aa;}.(:disabled){background:#fff0f1;}.ds-button-danger:focus-visible{outline:3px solid #42838e;outline-offset:3px} .ds-button-danger:disabled{opacity:.48;cursor:not-allowed}.ds-delete-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ds-delete-row{padding:5px 10px}@media(max-width:720px){.ds-delete-row{min-height:36px}}",
+                           "kind":  "button",
+                           "refersTo":  "button-danger",
+                           "html":  "\u003cdiv class=\"ds-delete-actions\" dir=\"rtl\"\u003e\u003cbutton class=\"ds-button-danger\"\u003eحذف فهرست\u003c/button\u003e\u003cbutton class=\"ds-button-danger ds-delete-row\"\u003eحذف\u003c/button\u003e\u003c/div\u003e"
+                       },
+                       {
+                           "name":  "Text Field",
+                           "description":  "Labeled Persian form field with visible focus.",
+                           "css":  ".ds-field{display:grid;gap:6px;color:var(--ink);font:600 13px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif}.ds-field input{font:400 15px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif;min-height:43px;padding:9px 12px;border:1px solid #b5c6cd;border-radius:6px;background:#fff;color:var(--ink);caret-color:var(--accent)}.ds-field input::placeholder{color:#657d87;opacity:1}.ds-field input:focus-visible{outline:3px solid #42838e;outline-offset:3px}",
+                           "kind":  "input",
+                           "refersTo":  "input",
+                           "html":  "\u003clabel class=\"ds-field\" dir=\"rtl\"\u003eنام فهرست\u003cinput placeholder=\"نام فهرست را وارد کنید\"\u003e\u003c/label\u003e"
+                       },
+                       {
+                           "html":  "\u003cnav class=\"ds-nav\" dir=\"rtl\" aria-label=\"ناوبری\"\u003e\u003ca href=\"#lists\" aria-current=\"page\"\u003eفهرست اعضا\u003c/a\u003e\u003ca href=\"#campaigns\"\u003eکمپین‌ها\u003c/a\u003e\u003c/nav\u003e",
+                           "description":  "Written destinations with current-page tint.",
+                           "name":  "Navigation",
+                           "css":  ".ds-nav{display:grid;gap:7px;font:600 15px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif}.ds-nav a{padding:11px 14px;border-radius:7px;text-decoration:none;color:var(--muted)}.ds-nav a[aria-current=page]{background:var(--accent-soft);color:var(--accent)}.ds-nav a:hover{background:#eff4f5}.ds-nav a:focus-visible{outline:3px solid #42838e;outline-offset:3px}",
+                           "kind":  "nav"
+                       },
+                       {
+                           "name":  "Status Badge",
+                           "description":  "Written state; this example is the active-state variant.",
+                           "css":  ".ds-badge{display:inline-flex;align-items:center;gap:6px;font:600 12px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif;border-radius:5px;padding:3px 9px;background:#e3eff4;color:#245e79}.ds-badge:before{content:\"\";width:5px;height:5px;background:currentColor;border-radius:50%}",
+                           "kind":  "chip",
+                           "refersTo":  "badge",
+                           "html":  "\u003cspan class=\"ds-badge\" dir=\"rtl\"\u003eدر حال ارسال\u003c/span\u003e"
+                       },
+                       {
+                           "name":  "Register Panel",
+                           "description":  "Flat bordered container for operational content.",
+                           "css":  ".ds-panel{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font:15px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif}.ds-panel header{padding:18px 22px;border-bottom:1px solid var(--line);font-size:18px;font-weight:700}.ds-panel\u003ediv{padding:22px;color:var(--muted);font-size:13px}",
+                           "kind":  "card",
+                           "refersTo":  "panel",
+                           "html":  "\u003csection class=\"ds-panel\" dir=\"rtl\"\u003e\u003cheader\u003eفهرست‌های ذخیره‌شده\u003c/header\u003e\u003cdiv\u003eجمع‌آوری مستقل از ارسال\u003c/div\u003e\u003c/section\u003e"
+                       },
+                       {
+                           "html":  "\u003cdiv class=\"ds-preview\" dir=\"rtl\"\u003e\u003cp\u003eنمای تقریبی پیام خصوصی\u003c/p\u003e\u003cdiv class=\"ds-message\" dir=\"auto\"\u003eمتن پیام\u003c/div\u003e\u003c/div\u003e",
+                           "description":  "Tinted preview field and automatically directed white message bubble.",
+                           "name":  "Message Preview",
+                           "css":  ".ds-preview{background:#eef3f5;padding:24px;min-height:150px;font-family:\"Segoe UI\",Tahoma,Arial,sans-serif}.ds-preview p{font-size:12px;color:var(--muted);margin:0 0 12px}.ds-message{background:#fff;color:var(--ink);border-radius:12px 12px 3px 12px;max-width:460px;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:2;font-size:14px}",
+                           "kind":  "custom"
+                       },
+                       {
+                           "name":  "History Range Fields",
+                           "kind":  "custom",
+                           "description":  "Progressively revealed for chat-author collection. This default all-history snapshot keeps the prefilled days field disabled; limited history enables and requires it.",
+                           "html":  "\u003csection class=\"ds-history\" dir=\"rtl\"\u003e\u003ch3\u003eبازه تاریخچه گفتگو\u003c/h3\u003e\u003cdiv class=\"ds-history-grid\"\u003e\u003clabel\u003eبازه بررسی\u003cselect\u003e\u003coption\u003eهمه تاریخچه قابل دسترس\u003c/option\u003e\u003coption\u003eتعداد روزهای گذشته\u003c/option\u003e\u003c/select\u003e\u003c/label\u003e\u003clabel\u003eچند روز به گذشته؟\u003cinput type=\"number\" min=\"1\" max=\"36500\" step=\"1\" value=\"30\" disabled\u003e\u003c/label\u003e\u003c/div\u003e\u003cp\u003eبازه از لحظه شروع جمع‌آوری محاسبه می‌شود. متن پیام‌ها ذخیره نمی‌شود.\u003c/p\u003e\u003c/section\u003e",
+                           "css":  ".ds-history{font:15px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif;color:var(--ink);padding-top:24px;margin-top:24px;border-top:1px solid var(--line)}.ds-history h3{font-size:15px;margin:0 0 16px}.ds-history-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}.ds-history label{display:grid;gap:6px;align-content:start;font-size:13px;font-weight:600}.ds-history input,.ds-history select{font:400 15px/1.85 \"Segoe UI\",Tahoma,Arial,sans-serif;width:100%;border:1px solid #b5c6cd;border-radius:6px;background:#fff;color:var(--ink);padding:9px 12px;min-height:43px}.ds-history input:focus-visible,.ds-history select:focus-visible{outline:3px solid #42838e;outline-offset:3px}.ds-history p{font-size:12px;color:var(--muted)}@media(max-width:720px){.ds-history-grid{grid-template-columns:1fr}}"
+                       }
+                   ],
+    "narrative":  {
+                      "northStar":  "Dispatch register",
+                      "donts":  [
+                                    "Don\u0027t replace status words with color alone.",
+                                    "Don\u0027t add shadows to ordinary register panels.",
+                                    "Don\u0027t let wide tables force horizontal scrolling on the entire page.",
+                                    "Don\u0027t claim a visual approval or live Telegram verification from the recorded fixture review."
+                                ],
+                      "keyCharacteristics":  [
+                                                 "Persian RTL structure with isolated mixed-direction identifiers.",
+                                                 "Flat bordered registers and compact rectangular controls.",
+                                                 "Written status labels supported by color and an active-state dot.",
+                                                 "Responsive navigation and message preview ordering."
+                                             ],
+                      "dos":  [
+                                  "Do preserve Persian RTL layout and isolate mixed-direction identifiers.",
+                                  "Do keep status words visible alongside their semantic colors.",
+                                  "Do use bordered white panels and aligned compact controls for operational content.",
+                                  "Do keep message preview before recipient details when the detail grid collapses.",
+                                  "Do retain visible keyboard focus and the reduced-motion override."
+                              ],
+                      "overview":  "The implemented interface uses cool white surfaces, slate text, and a deep petrol accent. It is a compact Persian RTL working environment with clear dividers, aligned fields, and persistent written status labels.\n\nThis document records the built system, using `static/style.css`, `static/index.html`, and `static/app.js` as its source. The direction and code-first implementation were authorized; this record does not claim visual approval.",
+                      "rules":  [
+                                    {
+                                        "section":  "colors",
+                                        "body":  "Every status badge includes its Persian status word; color supplements that word.",
+                                        "name":  "The Written State Rule"
+                                    }
+                                ]
+                  }
+}

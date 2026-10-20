@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#164e57">
+  <title>دفتر ارسال · مدیریت تلگرام</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css?v=2">
+  <script src="/static/app.js?v=2" defer></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">رفتن به محتوای اصلی</a>
+  <div class="shell">
+    <aside class="rail">
+      <a class="brand" href="#lists"><img src="/static/mark.svg" alt="" width="36" height="36"><span>دفتر ارسال<small>مدیریت پیام‌های تلگرام</small></span></a>
+      <nav aria-label="ناوبری اصلی">
+        <a href="#lists" data-nav="lists"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1"/></svg>فهرست اعضا</a>
+        <a href="#campaigns" data-nav="campaigns"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 18-8-7 18-3-7-8-3ZM11 14 21 3"/></svg>کمپین‌ها</a>
+        <a href="#accounts" data-nav="accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21v-3a7 7 0 0 1 14 0v3M17 4a4 4 0 0 1 0 8M22 21v-3a7 7 0 0 0-4-6"/></svg>حساب‌ها</a>
+        <a href="#activity" data-nav="activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v18h17M8 15l4-5 4 3 5-8"/></svg>گزارش فعالیت</a>
+      </nav>
+      <div class="rail-foot"><span class="dot"></span>روی همین رایانه اجرا می‌شود<small>برای ادامه ارسال، این برنامه و پنجره اجرای آن را باز نگه دارید.</small></div>
+    </aside>
+    <div class="body">
+      <header class="topbar"><span id="breadcrumb">فهرست اعضا</span><span class="local-label"><span class="dot"></span>اتصال محلی <bdi>LOCAL</bdi></span></header>
+      <main id="workspace" tabindex="-1"></main>
+      <footer>جمع‌آوری اعضا و ارسال پیام، دو مرحله مستقل هستند.</footer>
+    </div>
+  </div>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
