@@ -45,10 +45,19 @@ example_user_one
 
 Open **حساب‌ها** and click **حذف** beside the account, then confirm. This removes the account from this app and deletes its local session files. It does not deactivate the Telegram account or revoke authorization remotely. Campaign reports retain its name; unfinished campaigns assigned to it return to draft. Open those campaigns, choose replacement accounts under **تغییر حساب‌های گیرنده‌های باقی‌مانده**, and review them again. Deletion is disabled while collection or sending is active. If cleanup fails, the account remains unavailable and shows **تلاش مجدد برای حذف** so removal can be retried.
 
+## Scheduling, activity, and account bios
+
+- The optional start time uses this PC's local time. Save the campaign, review it, and click Start to arm it. Keep the application running. Past times start immediately; restarting the app leaves unfinished campaigns paused for manual resume.
+- Random attempt delays retain the default 30–60 second range. Scheduled starts and Telegram wait deadlines are enforced independently of this interval.
+- The optional activity filter uses observed group-message dates, not Telegram last-seen status. Collect with the history method first. With the filter enabled, unknown activity (including old lists and CSV-only recipients) is excluded. Campaign review shows qualifying, inactive, and unknown counts. Recipient activity is frozen with the campaign snapshot.
+- Optional bio texts are entered one per line: up to 20 texts, each at most 70 characters. A selection is saved for each sending account and shown before review. It is applied before that account's first send in the campaign and remains afterward. Interrupted updates are checked against the current profile before another update is attempted. Bio changes are not proven to reduce bans.
+- Reports include the observed activity timestamp and destination wait deadline as Unix timestamps. Profile-update status appears in campaign details.
+
 ## Pause, errors, and recovery
 
 - Pause and Cancel prevent further attempts after any current Telegram request finishes. Cancel does not delete messages already delivered.
 - Telegram rate limits, restrictions, bans, and expired authorization pause the entire campaign. The app does not switch accounts in response to those errors. Finite wait times remain enforced across restarts.
+- Login and reconnect cannot clear an active account cooldown. Slow-mode errors retain a destination deadline without marking the entire account restricted. Posting-permission errors pause the campaign rather than continuing through the list.
 - After the reported waiting period, inspect the account under Accounts. **بررسی اتصال** checks authorization; Telegram does not provide a guarantee that this means a sending restriction has cleared. A new sending restriction will pause the campaign again.
 - To remove an affected sender, use **تغییر حساب‌های گیرنده‌های باقی‌مانده** on a paused campaign. This reassigns only pending recipients and requires reviewing the campaign again.
 - A timeout or interrupted request can have an uncertain result. Inspect that account's Telegram chat, then mark the delivery sent, skipped, or pending. Uncertain deliveries block resume until reviewed.

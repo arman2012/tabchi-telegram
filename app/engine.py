@@ -9,7 +9,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from telethon import TelegramClient, errors, types
+from telethon import TelegramClient, errors, types, functions
 
 from .store import Store, now
 
@@ -34,8 +34,7 @@ STOP_ERRORS = {"FloodWaitError", "FloodPremiumWaitError", "PeerFloodError", "Use
                "SessionRevokedError", "SessionExpiredError", "PhoneNumberBannedError", "AuthKeyDuplicatedError"}
 SKIP_ERRORS = {"UserPrivacyRestrictedError", "UserIsBlockedError", "YouBlockedUserError",
                "InputUserDeactivatedError", "UserNotMutualContactError", "UserIdInvalidError",
-               "PeerIdInvalidError", "UsernameInvalidError", "UsernameNotOccupiedError",
-               "ChatWriteForbiddenError", "UserBannedInChannelError"}
+               "PeerIdInvalidError", "UsernameInvalidError", "UsernameNotOccupiedError"}
 
 
 class Engine:
@@ -69,7 +68,7 @@ class Engine:
         return value
 
     async def client(self, account_id, authorized=True):
-        self.require("accounts", account_id)
+        self.check_cooldown(account_id)
         if account_id not in self.clients:
             cred = self.credentials()
             self.clients[account_id] = self.factory(
@@ -137,7 +136,7 @@ class Engine:
         return {"id": account_id, "step": "done"}
 
     async def finish_login(self, account_id, user):
-        self.require("accounts", account_id)
+        self.check_cooldown(account_id)
         other = self.s.one("SELECT id FROM accounts WHERE user_id=? AND id!=?", (user.id, account_id))
         if other:
             raise Problem("این حساب قبلاً اضافه شده است.")
@@ -237,6 +236,7 @@ class Engine:
         self.require_idle()
         campaign = self.require("campaigns", campaign_id)
         with self.s.db() as db:
+            db.execute("DELETE FROM campaign_bios WHERE campaign_id=?", (campaign_id,))
             db.execute("DELETE FROM deliveries WHERE campaign_id=?", (campaign_id,))
             db.execute("DELETE FROM campaigns WHERE id=?", (campaign_id,))
             db.execute("DELETE FROM lists WHERE status='deleted' AND NOT EXISTS (SELECT 1 FROM campaigns WHERE list_id=lists.id)")
@@ -271,7 +271,7 @@ class Engine:
         self.jobs["collect:" + list_id] = asyncio.create_task(self._collect(list_id, sources, method, started, cutoff))
         return list_id
 
-    def save_collected_user(self, list_id, account_id, user, own_ids):
+    def save_collected_user(self, list_id, account_id, user, own_ids, active_at=None):
         if not isinstance(user, types.User) or user.bot or user.deleted or user.id in own_ids:
             return False
         # A minimal user hash is context-bound, not a reusable InputPeerUser hash.
@@ -286,6 +286,9 @@ class Engine:
         else:
             self.s.execute("INSERT INTO members(list_id,user_id,username,name,access_json) VALUES (?,?,?,?,?)",
                            (list_id, user.id, user.username, name, json.dumps(access)))
+        if active_at is not None:
+            self.s.execute("UPDATE members SET last_active_at=MAX(COALESCE(last_active_at,0),?) WHERE list_id=? AND user_id=?",
+                           (active_at, list_id, user.id))
         return True
 
     async def collect_history(self, list_id, account_id, client, entity, own_ids, notes, started, cutoff):
@@ -316,7 +319,11 @@ class Engine:
                 if getattr(message, "action", None):
                     continue
                 sender_id = message.sender_id
-                if sender_id is not None and (sender_id <= 0 or sender_id in resolved):
+                if sender_id is not None and sender_id <= 0:
+                    continue
+                if sender_id in resolved:
+                    self.s.execute("UPDATE members SET last_active_at=MAX(COALESCE(last_active_at,0),?) WHERE list_id=? AND user_id=?",
+                                   (date.timestamp(), list_id, sender_id))
                     continue
                 user = message.sender
                 if user is None:
@@ -338,7 +345,7 @@ class Engine:
                     continue
                 resolved.add(user.id)
                 unresolved.discard(user.id)
-                if self.save_collected_user(list_id, account_id, user, own_ids):
+                if self.save_collected_user(list_id, account_id, user, own_ids, date.timestamp()):
                     authors.add(user.id)
         finally:
             progress()
@@ -417,7 +424,17 @@ class Engine:
             db.execute("UPDATE lists SET note=? WHERE id=?", (f"Duplicate rows: {duplicates}; invalid rows: {bad}", list_id))
         return list_id
 
-    def create_campaign(self, title, list_id, text, photo_id, account_ids, batch_size, delay_min, delay_max):
+    def create_campaign(self, title, list_id, text, photo_id, account_ids, batch_size, delay_min, delay_max,
+                        scheduled_at=None, active_within_days=None, bio_texts=None):
+        if isinstance(scheduled_at, datetime):
+            if scheduled_at.tzinfo is None or scheduled_at.utcoffset() is None:
+                raise Problem("زمان شروع باید منطقه زمانی داشته باشد.")
+            scheduled_at = scheduled_at.timestamp()
+        bio_texts = bio_texts or []
+        if len(bio_texts) > 20 or any(not isinstance(t, str) or not t.strip() or len(t) > 70 for t in bio_texts):
+            raise Problem("حداکثر ۲۰ متن بیو، هرکدام ۱ تا ۷۰ نویسه وارد کنید.")
+        if active_within_days is not None and (type(active_within_days) is not int or not 1 <= active_within_days <= 365):
+            raise Problem("بازه فعالیت باید بین ۱ و ۳۶۵ روز باشد.")
         source = self.require("lists", list_id)
         if source["status"] not in {"ready", "partial"}:
             raise Problem("ابتدا جمع‌آوری اعضا باید تمام شود.")
@@ -432,7 +449,16 @@ class Engine:
         own_ids = {r["user_id"] for r in self.s.all("SELECT user_id FROM accounts") if r["user_id"]}
         own_names = {r["username"].lower() for r in self.s.all("SELECT username FROM accounts WHERE username IS NOT NULL")}
         members = [m for m in members if m["user_id"] not in own_ids and (m["username"] or "").lower() not in own_names]
+        cutoff = time.time() - active_within_days * 86400 if active_within_days else None
+        counts = {"qualifying": 0, "inactive": 0, "unknown": 0}
+        for member in members:
+            stamp = member['last_active_at']
+            counts['unknown' if stamp is None else 'inactive' if cutoff is not None and stamp < cutoff else 'qualifying'] += 1
+        if cutoff is not None:
+            members = [m for m in members if m['last_active_at'] is not None and m['last_active_at'] >= cutoff]
         if not members:
+            if cutoff is not None:
+                raise Problem(f"هیچ گیرنده‌ای در بازه فعالیت نیست؛ غیرفعال: {counts['inactive']}، نامشخص: {counts['unknown']}. ابتدا تاریخچه پیام‌های گروه را جمع‌آوری کنید یا فیلتر را تغییر دهید.")
             raise Problem("فهرست گیرنده خالی است.")
         campaign_id = uid()
         with self.s.db() as db:
@@ -445,12 +471,20 @@ class Engine:
                               VALUES (?,?,?,?,?,?)""",
                            (campaign_id, member["user_id"], member["username"], member["name"],
                             member["access_json"], account_ids[(i // batch_size) % len(account_ids)]))
+                db.execute("UPDATE deliveries SET last_active_at=? WHERE id=last_insert_rowid()", (member['last_active_at'],))
+            db.execute("UPDATE campaigns SET scheduled_at=?,active_within_days=?,filter_counts_json=?,bio_texts_json=? WHERE id=?",
+                       (scheduled_at, active_within_days, json.dumps(counts), json.dumps(bio_texts), campaign_id))
+            for account_id in account_ids:
+                if bio_texts:
+                    db.execute("INSERT INTO campaign_bios(campaign_id,account_id,text) VALUES (?,?,?)",
+                               (campaign_id, account_id, random.choice(bio_texts)))
         return campaign_id
 
     def validate_accounts(self, account_ids):
         if not account_ids or len(set(account_ids)) != len(account_ids):
             raise Problem("حساب‌های ارسال را بدون تکرار انتخاب کنید.")
         for account_id in account_ids:
+            self.check_cooldown(account_id)
             account = self.require("accounts", account_id)
             if account["status"] != "connected":
                 raise Problem("حساب‌های انتخاب‌شده باید متصل باشند.")
@@ -471,6 +505,11 @@ class Engine:
         self.validate_accounts(account_ids)
         pending = self.s.all("SELECT id FROM deliveries WHERE campaign_id=? AND status='pending' ORDER BY id", (campaign_id,))
         with self.s.db() as db:
+            texts = json.loads(c['bio_texts_json'])
+            for account_id in account_ids:
+                if texts:
+                    db.execute("INSERT OR IGNORE INTO campaign_bios(campaign_id,account_id,text) VALUES (?,?,?)",
+                               (campaign_id, account_id, random.choice(texts)))
             for i, row in enumerate(pending):
                 db.execute("UPDATE deliveries SET account_id=? WHERE id=?",
                            (account_ids[(i // c["batch_size"]) % len(account_ids)], row["id"]))
@@ -511,15 +550,39 @@ class Engine:
 
     def restrict(self, account_id, exc):
         seconds = getattr(exc, "seconds", 0)
-        self.s.execute("UPDATE accounts SET status='restricted',error=?,wait_until=? WHERE id=?",
+        self.s.execute("UPDATE accounts SET status='restricted',error=?,wait_until=MAX(wait_until,?) WHERE id=?",
                        (type(exc).__name__, time.time() + seconds if seconds else 0, account_id))
+
+    def check_cooldown(self, account_id):
+        account = self.require('accounts', account_id)
+        if account['wait_until'] > time.time():
+            raise Problem("زمان انتظار اعلام‌شده توسط تلگرام هنوز تمام نشده است.")
+
+    async def prepare_bio(self, campaign_id, account_id, client):
+        row = self.s.one('SELECT * FROM campaign_bios WHERE campaign_id=? AND account_id=?', (campaign_id, account_id))
+        if not row or row['status'] == 'done':
+            return
+        self.check_cooldown(account_id)
+        try:
+            if row['status'] in {'updating', 'uncertain'}:
+                full = await client(functions.users.GetFullUserRequest('me'))
+                if full.full_user.about == row['text']:
+                    self.s.execute("UPDATE campaign_bios SET status='done',error=NULL WHERE campaign_id=? AND account_id=?", (campaign_id, account_id))
+                    return
+            self.s.execute("UPDATE campaign_bios SET status='updating',error=NULL WHERE campaign_id=? AND account_id=?", (campaign_id, account_id))
+            await client(functions.account.UpdateProfileRequest(about=row['text']))
+            self.s.execute("UPDATE campaign_bios SET status='done',error=NULL WHERE campaign_id=? AND account_id=?", (campaign_id, account_id))
+        except BaseException as exc:
+            self.s.execute("UPDATE campaign_bios SET status='uncertain',error=? WHERE campaign_id=? AND account_id=?",
+                           (type(exc).__name__, campaign_id, account_id))
+            raise
 
     async def wait_until(self, campaign_id):
         while True:
             c = self.require("campaigns", campaign_id)
             if c["status"] != "running":
                 return False
-            remaining = c["next_attempt_at"] - time.time()
+            remaining = max(c["next_attempt_at"], c['scheduled_at'] or 0, c['server_wait_until']) - time.time()
             if remaining <= 0:
                 return True
             await asyncio.sleep(min(remaining, 0.25))
@@ -534,7 +597,12 @@ class Engine:
                     self.s.execute("UPDATE campaigns SET status='completed',note='' WHERE id=?", (campaign_id,))
                     return
                 current_id = delivery["id"]
+                if delivery['wait_until'] > time.time():
+                    self.s.execute("UPDATE campaigns SET server_wait_until=MAX(server_wait_until,?) WHERE id=?",
+                                   (delivery['wait_until'], campaign_id))
+                    continue
                 account = self.require("accounts", delivery["account_id"])
+                self.check_cooldown(account['id'])
                 if account["status"] != "connected":
                     raise Problem("حساب ارسال متصل نیست؛ حساب را بررسی کنید.")
                 client = await self.client(account["id"])
@@ -571,6 +639,10 @@ class Engine:
                 # Re-check after resolution so Pause prevents a new send from starting.
                 if self.require("campaigns", campaign_id)["status"] != "running":
                     return
+                await self.prepare_bio(campaign_id, account['id'], client)
+                if self.require('campaigns', campaign_id)['status'] != 'running':
+                    return
+                self.check_cooldown(account['id'])
                 self.s.execute("UPDATE deliveries SET status='sending',attempted_at=? WHERE id=?", (now(), current_id))
                 try:
                     if c["photo_id"]:
@@ -578,10 +650,13 @@ class Engine:
                         message = await client.send_file(user, self.s.root / photo["path"], caption=c["text"], parse_mode=None)
                     else:
                         message = await client.send_message(user, c["text"], parse_mode=None, link_preview=False)
-                    self.s.execute("UPDATE deliveries SET status='sent',message_id=?,error=NULL WHERE id=?", (message.id, current_id))
+                    with self.s.db() as db:
+                        db.execute("UPDATE deliveries SET status='sent',message_id=?,error=NULL WHERE id=?", (message.id, current_id))
+                        db.execute("UPDATE campaigns SET next_attempt_at=? WHERE id=?",
+                                   (time.time() + random.uniform(c['delay_min'], c['delay_max']), campaign_id))
                 except Exception as exc:
                     kind = type(exc).__name__
-                    if kind in STOP_ERRORS:
+                    if kind in STOP_ERRORS or kind == 'SlowModeWaitError':
                         self.result(current_id, "pending", kind)
                         raise
                     if kind in SKIP_ERRORS:
@@ -592,7 +667,8 @@ class Engine:
                     else:
                         self.result(current_id, "uncertain", kind)
                         raise
-                self.schedule_next(c)
+                if self.s.one('SELECT status FROM deliveries WHERE id=?', (current_id,))['status'] != 'sent':
+                    self.schedule_next(c)
                 current_id = None
                 pending = self.s.one("SELECT id FROM deliveries WHERE campaign_id=? AND status='pending'", (campaign_id,))
                 if not pending and self.require("campaigns", campaign_id)["status"] == "running":
@@ -612,8 +688,11 @@ class Engine:
                 self.restrict(delivery["account_id"], exc)
             note = str(exc) if isinstance(exc, Problem) else kind
             seconds = getattr(exc, "seconds", 0)
-            self.s.execute("UPDATE campaigns SET status='paused',note=?,next_attempt_at=MAX(next_attempt_at,?) WHERE id=? AND status='running'",
-                           (note, time.time() + seconds, campaign_id))
+            deadline = time.time() + seconds if seconds else 0
+            if current_id and kind == 'SlowModeWaitError':
+                self.s.execute("UPDATE deliveries SET wait_until=MAX(wait_until,?) WHERE id=?", (deadline, current_id))
+            self.s.execute("UPDATE campaigns SET status='paused',note=?,next_attempt_at=MAX(next_attempt_at,?),server_wait_until=MAX(server_wait_until,?) WHERE id=? AND status='running'",
+                           (note, deadline, deadline, campaign_id))
 
     def result(self, delivery_id, status, error):
         self.s.execute("UPDATE deliveries SET status=?,error=?,attempted_at=? WHERE id=?", (status, error, now(), delivery_id))

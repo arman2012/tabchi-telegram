@@ -7,6 +7,7 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
+from datetime import datetime
 from typing import Literal
 
 from fastapi import FastAPI, File, Request, UploadFile
@@ -64,9 +65,16 @@ class Campaign(BaseModel):
     batch_size: int = Field(default=10, ge=1, le=10000)
     delay_min: float = Field(default=30, ge=1, le=86400, allow_inf_nan=False)
     delay_max: float = Field(default=60, ge=1, le=86400, allow_inf_nan=False)
+    scheduled_at: datetime | None = None
+    active_within_days: int | None = Field(default=None, ge=1, le=365, strict=True)
+    bio_texts: list[str] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def bounds(self):
+        if self.scheduled_at is not None and (self.scheduled_at.tzinfo is None or self.scheduled_at.utcoffset() is None):
+            raise ValueError("زمان شروع باید منطقه زمانی داشته باشد.")
+        if any(not text.strip() or len(text) > 70 for text in self.bio_texts):
+            raise ValueError("هر بیو باید بین ۱ تا ۷۰ نویسه باشد.")
         if self.delay_min > self.delay_max:
             raise ValueError("حداقل زمان نباید از حداکثر بیشتر باشد.")
         return self
@@ -98,6 +106,11 @@ def create_app(data_root=None, client_factory=None):
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.engine = engine
+    def campaign_options(c):
+        c['bio_texts'] = json.loads(c.pop('bio_texts_json'))
+        c['filter_counts'] = json.loads(c.pop('filter_counts_json'))
+        c['bios'] = store.all('SELECT account_id,text,status,error FROM campaign_bios WHERE campaign_id=?', (c['id'],))
+        return c
     app.state.store = store
 
     @app.middleware("http")
@@ -165,6 +178,7 @@ def create_app(data_root=None, client_factory=None):
                              FROM lists l LEFT JOIN members m ON m.list_id=l.id WHERE l.status!='deleted' GROUP BY l.id ORDER BY l.created DESC""")
         campaigns = store.all("SELECT * FROM campaigns ORDER BY created DESC")
         for c in campaigns:
+            campaign_options(c)
             c["counts"] = {r["status"]: r["n"] for r in store.all("SELECT status,COUNT(*) n FROM deliveries WHERE campaign_id=? GROUP BY status", (c["id"],))}
             c["account_ids"] = json.loads(c.pop("accounts_json"))
         return {"configured": bool(store.get_setting("credentials")), "accounts": accounts,
@@ -285,9 +299,10 @@ def create_app(data_root=None, client_factory=None):
         c = engine.require("campaigns", campaign_id)
         if offset < 0 or limit not in range(1, 501):
             raise Problem("صفحه معتبر نیست.")
-        rows = store.all("SELECT id,user_id,username,name,account_id,status,error,message_id,attempted_at FROM deliveries WHERE campaign_id=? ORDER BY id LIMIT ? OFFSET ?", (campaign_id, limit, offset))
+        rows = store.all("SELECT id,user_id,username,name,account_id,status,error,message_id,attempted_at,last_active_at,wait_until FROM deliveries WHERE campaign_id=? ORDER BY id LIMIT ? OFFSET ?", (campaign_id, limit, offset))
         total = store.one("SELECT COUNT(*) n FROM deliveries WHERE campaign_id=?", (campaign_id,))["n"]
         c["account_ids"] = json.loads(c.pop("accounts_json"))
+        campaign_options(c)
         return {"campaign": c, "rows": rows, "total": total}
 
     @app.post("/api/campaigns/{campaign_id}/review")
@@ -325,10 +340,10 @@ def create_app(data_root=None, client_factory=None):
         engine.require("campaigns", campaign_id)
         output = io.StringIO(newline="")
         writer = csv.writer(output)
-        writer.writerow(["user_id", "username", "name", "account", "status", "error", "message_id", "attempted_at"])
+        writer.writerow(["user_id", "username", "name", "account", "status", "error", "message_id", "attempted_at", "last_active_at", "wait_until"])
         for row in store.all("""SELECT d.*, a.label FROM deliveries d JOIN accounts a ON a.id=d.account_id
                                 WHERE campaign_id=? ORDER BY d.id""", (campaign_id,)):
-            values = [row[k] for k in ["user_id", "username", "name", "label", "status", "error", "message_id", "attempted_at"]]
+            values = [row[k] for k in ["user_id", "username", "name", "label", "status", "error", "message_id", "attempted_at", "last_active_at", "wait_until"]]
             # Prevent spreadsheet formulas when names/labels are opened in Excel.
             writer.writerow(["'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@", "\t", "\r")) else v for v in values])
         return Response("\ufeff" + output.getvalue(), media_type="text/csv; charset=utf-8",

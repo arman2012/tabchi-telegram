@@ -24,6 +24,8 @@ Collection also supports visible message authors from all accessible group histo
 Group collection and CSV username import; persistent reviewed recipient snapshots; text or one photo with a caption; batches of 10 attempts per account; one global queue with a random 30–60 second delay. Pause the entire campaign on Telegram restrictions. Manual start, pause, resume, cancel. Restart restores unfinished work as paused. Telegram may expose only part of a group's membership.
 
 ## Product Principles
+
+Campaigns support optional local-time scheduled starts (UTC storage), with manual arming and manual resume after restart. Optional activity filtering uses observed group-message timestamps, excludes unknown activity, and freezes the filtered snapshot. Optional operator-provided bios are selected per account per campaign and applied once before its first delivery; they remain afterward. Interrupted profile updates are reconciled against the current profile. These features make no claim of proven ban reduction. Account cooldowns survive re-login; destination slow-mode deadlines and campaign scheduling are independent of random attempt delays. Permission errors pause campaigns. CSV reports include activity and wait timestamps.
 - Collection never sends messages.
 - Show actual state and collection limitations.
 - Preserve confirmed deliveries and flag uncertain outcomes for review.
